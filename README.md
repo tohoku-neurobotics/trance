@@ -15,7 +15,7 @@ pip install -e .
 - run locomotion
 `python scripts/dream_waq/train_v2.py --task Dream-WaQ-Rough-Unitree-Go2-v2 --num_envs 4096 --headless`
 - run l2t baseline
-`python scripts/rlopt/train.py --task Dream-WaQ-Rough-Unitree-Go2-v2 --num_envs 4096 --headless`
+`python scripts/rlopt/train.py --task Isaac-Velocity-Rough-Go2-L2T-v0 --num_envs 4096 --headless`
 - evaluate locomotion with visualization
 `python scripts/dream_waq/play_v2.py --task Dream-WaQ-Rough-Unitree-Go2-v2 --num_envs 128`
 
