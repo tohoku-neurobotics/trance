@@ -101,7 +101,7 @@ from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
 
 # Import extensions to set up environment tasks
-import cpg.tasks  # noqa: F401
+import locomotion.tasks  # noqa: F401
 from isaaclab_tasks.utils.hydra import hydra_task_config
 from isaaclab.utils import class_to_dict
 from isaaclab_tasks.utils import get_checkpoint_path

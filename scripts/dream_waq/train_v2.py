@@ -44,7 +44,7 @@ import os
 import torch
 from datetime import datetime
 
-from cpg.tasks.cpg.dream_waq_agent.on_policy_runner_v2 import OnPolicyRunner
+from locomotion.tasks.velocity_locomotion.dream_waq_agent.on_policy_runner_v2 import OnPolicyRunner
 
 from isaaclab.envs import (
     DirectRLEnvCfg,
@@ -54,11 +54,11 @@ from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
-from cpg.tasks.cpg.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg, A1RoughPPOCfg
-from cpg.tasks.cpg.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
+from locomotion.tasks.velocity_locomotion.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg, A1RoughPPOCfg
+from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
 
 # Import extensions to set up environment tasks
-import cpg.tasks  # noqa: F401
+import locomotion.tasks  # noqa: F401
 import wandb
 
 torch.backends.cuda.matmul.allow_tf32 = True

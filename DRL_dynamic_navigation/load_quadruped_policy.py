@@ -3,7 +3,7 @@ import os
 import copy
 import torch
 
-from cpg.tasks.cpg.dream_waq_agent.on_policy_runner_v2 import OnPolicyRunner
+from locomotion.tasks.velocity_locomotion.dream_waq_agent.on_policy_runner_v2 import OnPolicyRunner
 
 from isaaclab.envs import (
     DirectRLEnvCfg,
@@ -12,12 +12,12 @@ from isaaclab.envs import (
 from isaaclab.utils.dict import print_dict
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils import parse_env_cfg
-from cpg.tasks.cpg.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg
-from cpg.tasks.cpg.dream_waq_env.dream_waq_go2_rough_env_cfg import NavUnitreeGo2RoughEnvCfg
-from cpg.tasks.cpg.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
+from locomotion.tasks.velocity_locomotion.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg
+from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_go2_rough_env_cfg import NavUnitreeGo2RoughEnvCfg
+from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
 
 # Import extensions to set up environment tasks
-import cpg.tasks  # noqa: F401
+import locomotion.tasks  # noqa: F401
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

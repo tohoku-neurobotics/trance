@@ -9,7 +9,7 @@
 - install locomotion package
 ```bash
 pip install stable-baselines3[extra]
-python -m pip install -e exts/cpg
+python -m pip install -e exts/locomotion
 pip install -e .
 ```
 - run locomotion

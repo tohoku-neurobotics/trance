@@ -41,7 +41,7 @@ from .actor_critic import ActorCritic
 from .ppo_cnn import PPO
 from .actor_critic_cnn_DWAQ import ActorCritic_DWAQ
 from .actor_critic_recurrent import ActorCriticRecurrent
-from cpg.tasks.cpg.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
+from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
 
 import wandb
 

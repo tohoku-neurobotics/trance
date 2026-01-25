@@ -44,8 +44,8 @@ import os
 import torch
 from datetime import datetime
 
-from cpg.tasks.cpg.agents.actor_critic_slr import ActorCriticSLR
-from cpg.tasks.cpg.slr_rl_env.slr_env_wrapped import SLRVecEnvWrapper
+from locomotion.tasks.velocity_locomotion.agents.actor_critic_slr import ActorCriticSLR
+from locomotion.tasks.velocity_locomotion.slr_rl_env.slr_env_wrapped import SLRVecEnvWrapper
 
 from isaaclab.envs import (
     DirectRLEnvCfg,
@@ -55,10 +55,10 @@ from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
-from cpg.tasks.cpg.agents.slr_ppo_cfg import Go2RoughPPOCfg
+from locomotion.tasks.velocity_locomotion.agents.slr_ppo_cfg import Go2RoughPPOCfg
 
 # Import extensions to set up environment tasks
-import cpg.tasks  # noqa: F401
+import locomotion.tasks  # noqa: F401
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

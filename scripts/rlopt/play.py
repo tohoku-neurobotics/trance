@@ -80,7 +80,7 @@ from stable_baselines3.common.vec_env import VecNormalize
 
 from isaaclab.utils.dict import print_dict
 
-import cpg.tasks  # noqa: F401
+import locomotion.tasks  # noqa: F401
 from isaaclab_tasks.utils.parse_cfg import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
 from rlopt.agent import RecurrentL2T
 
