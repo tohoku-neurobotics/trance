@@ -298,7 +298,7 @@ class RewardsCfg:
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
-    joint_power = RewTerm(func=mdp.joint_power, weight=0.0)
+    joint_powers = RewTerm(func=mdp.joint_powers, weight=0.0)
     base_height_l2 = RewTerm(
         func=mdp.base_height_l2, 
         weight=0.0,

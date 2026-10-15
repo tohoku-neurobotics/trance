@@ -39,9 +39,10 @@ def eval_policy(policy, eval_or_test_env, current_steps,
         ep_step = 0
         hidden = policy.get_initial_states()
         while ep_step < eval_or_test_env.max_episode_step:
-            # t1 = time.time()
+            t1 = time.time()
             with torch.no_grad():
                 action, hidden = policy.select_action(lidar_state, robot_goal_state, hidden)
+            # print('time: ', time.time() - t1) # 0.4ms
             # action = eval_or_test_env.dwa_compute_action()
             lidar_state, robot_goal_state, reward, done, info = eval_or_test_env.step(action, eval=True, save_data=if_save_data)
             # print('time: ', time.time() - t1) # 7.5ms
@@ -130,7 +131,7 @@ def main():
     # parser.add_argument("--load_model", type=str, default="step_480000_success_88")
     parser.add_argument("--load_model", type=str, default="")
 
-    parser.add_argument("--load_test_model", type=str, default="step_400000_success_87")
+    parser.add_argument("--load_test_model", type=str, default="")
     # environment settings
     parser.add_argument("--action_dim", type=int, default=2)
     parser.add_argument("--lidar_dim", type=int, default=1800)
@@ -161,7 +162,7 @@ def main():
     file_results = file_prefix + '/results'
     file_models = file_prefix + '/models'
     file_evaluation_episodes = file_prefix + '/evaluation_episodes'
-    file_final_test_episodes = file_prefix + '/final_test_episodes_40'
+    file_final_test_episodes = file_prefix + '/final_test_episodes_304'
 
 
     if not os.path.exists(file_results):

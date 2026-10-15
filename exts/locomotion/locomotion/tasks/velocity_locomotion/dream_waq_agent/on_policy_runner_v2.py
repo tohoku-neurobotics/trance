@@ -41,9 +41,10 @@ from .actor_critic import ActorCritic
 from .ppo_cnn import PPO
 from .actor_critic_cnn_DWAQ import ActorCritic_DWAQ
 from .actor_critic_recurrent import ActorCriticRecurrent
-from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
+# from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped import DreamWaQVecEnvWrapper
+from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_command_env_wrapped import DreamWaQVecEnvWrapper
 
-import wandb
+# import wandb
 
 class OnPolicyRunner:
     env : DreamWaQVecEnvWrapper
@@ -184,7 +185,7 @@ class OnPolicyRunner:
                     infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
                 value = torch.mean(infotensor)
                 self.writer.add_scalar('Episode/' + key, value, locs['it'])
-                wandb.log({'Episode/' + key: value}, step=locs['it'])
+                # wandb.log({'Episode/' + key: value}, step=locs['it'])
                 ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
         # mean_std = self.alg.actor_critic.std.mean()  # initially, std will be NaN along with training
         mean_std = self.alg.actor_critic.log_std.mean()
@@ -199,24 +200,24 @@ class OnPolicyRunner:
         self.writer.add_scalar('Perf/collection time', locs['collection_time'], locs['it'])
         self.writer.add_scalar('Perf/learning_time', locs['learn_time'], locs['it'])
 
-        wandb.log({'Loss/value_function': locs['mean_value_loss'],
-                   'Loss/surrogate': locs['mean_surrogate_loss'],
-                   'Loss/autoenc_function': locs['mean_autoenc_loss'],
-                   'Loss/learning_rate': self.alg.learning_rate,
-                   'Policy/mean_noise_std': mean_std.item(),
-                   'Perf/total_fps': fps,
-                   'Perf/collection time': locs['collection_time'],
-                   'Perf/learning_time': locs['learn_time']}, step=locs['it'])
+        # wandb.log({'Loss/value_function': locs['mean_value_loss'],
+        #            'Loss/surrogate': locs['mean_surrogate_loss'],
+        #            'Loss/autoenc_function': locs['mean_autoenc_loss'],
+        #            'Loss/learning_rate': self.alg.learning_rate,
+        #            'Policy/mean_noise_std': mean_std.item(),
+        #            'Perf/total_fps': fps,
+        #            'Perf/collection time': locs['collection_time'],
+        #            'Perf/learning_time': locs['learn_time']}, step=locs['it'])
         
         if len(locs['rewbuffer']) > 0:
             self.writer.add_scalar('Train/mean_reward', statistics.mean(locs['rewbuffer']), locs['it'])
             self.writer.add_scalar('Train/mean_episode_length', statistics.mean(locs['lenbuffer']), locs['it'])
-            wandb.log({'Train/mean_reward': statistics.mean(locs['rewbuffer']),
-                       'Train/mean_episode_length': statistics.mean(locs['lenbuffer'])}, step=locs['it'])
+            # wandb.log({'Train/mean_reward': statistics.mean(locs['rewbuffer']),
+            #            'Train/mean_episode_length': statistics.mean(locs['lenbuffer'])}, step=locs['it'])
             self.writer.add_scalar('Train/mean_reward/time', statistics.mean(locs['rewbuffer']), self.tot_time)
             self.writer.add_scalar('Train/mean_episode_length/time', statistics.mean(locs['lenbuffer']), self.tot_time)
-            wandb.log({'Train/mean_reward/time': statistics.mean(locs['rewbuffer']),
-                       'Train/mean_episode_length/time': statistics.mean(locs['lenbuffer'])}, step=self.tot_time)
+            # wandb.log({'Train/mean_reward/time': statistics.mean(locs['rewbuffer']),
+            #            'Train/mean_episode_length/time': statistics.mean(locs['lenbuffer'])}, step=self.tot_time)
 
         str = f" \033[1m Learning iteration {locs['it']}/{self.current_learning_iteration + locs['num_learning_iterations']} \033[0m "
 

@@ -5,7 +5,7 @@ from torch.nn.functional import softmax, relu
 from torch.nn import Parameter
 import numpy as np
 import copy
-from utils.state import ObservableState, FullState
+from utils_trans.state import ObservableState, FullState
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -395,7 +395,9 @@ class RGL:
         torch.save(self.model.state_dict(), filename)
 
     def load(self, filename):
-        self.model.load_state_dict(torch.load(filename))
+        self.model.load_state_dict(
+            torch.load(filename, map_location=self.device)
+        )
 
 def pad_batch(batch):
     """

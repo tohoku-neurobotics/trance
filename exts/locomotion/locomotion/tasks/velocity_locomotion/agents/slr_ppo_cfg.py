@@ -45,4 +45,4 @@ class Go2RoughPPOCfg:
     save_interval: int = 100
     algorithm: AlgorithmCfg = AlgorithmCfg()
     policy: PolicyCfg = PolicyCfg()
-    clip_actions: float | None = None
+    clip_actions: float | None = 100.0

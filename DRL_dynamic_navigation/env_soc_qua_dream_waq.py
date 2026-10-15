@@ -4,9 +4,9 @@ import numpy as np
 
 import torch
 from numpy.linalg import norm
-from utils.human import Human
-from utils.robot import Robot
-from utils.state import ObservableState
+from utils_trans.human import Human
+from utils_trans.robot import Robot
+from utils_trans.state import ObservableState
 from policy.policy_factory import policy_factory
 from info import *
 from math import atan2, hypot, sqrt, cos, sin, fabs, inf, ceil
@@ -21,7 +21,7 @@ class CrowdSim:
     laser_max_range = 6.0
     square_width = 10.0
 
-    def __init__(self, args, terrain_dim, action_range, device, quadruped_policy=None, quadruped_env=None):
+    def __init__(self, args, terrain_dim, action_range, device, action_choices=None, quadruped_policy=None, quadruped_env=None):
         self.human_policy_name = 'orca' # human policy is fixed orca policy
         self.terrain_dim = terrain_dim
         self.robot_policy = args.policy
@@ -83,6 +83,10 @@ class CrowdSim:
         self.human_num_max = 4
         self.static_obstacle_num_max = 3
         self.robot_visible_threshold = 1.5
+        self.rectangle_x = 4.0
+        self.rectangle_y = [2.0, 5.0]
+        self.add_human_num_max = 3
+        self.add_human_num = None
 
         self.human_num = None
         self.static_obstacle_num = None
@@ -92,6 +96,7 @@ class CrowdSim:
         self.static_obstacles = None
         self.rectangles = None
         self.action_range = action_range
+        self.action_choices = action_choices
         self.robot = Robot()
         self.robot.time_step = self.time_step
         self.robot.v_pref = action_range[1, 0]
@@ -151,6 +156,16 @@ class CrowdSim:
         self.humans = [None] * self.human_num
         for i in range(self.human_num):
             self.humans[i] = self.generate_circle_crossing_human()
+        
+        # add_human_num_up = int(np.random.randint(self.add_human_num_max + 1, size=1)[0])
+        # for i in range(add_human_num_up):
+        #     self.humans.append(self.generate_rectangle_flow_human(down=False))
+
+        # add_human_num_down = int(np.random.randint(self.add_human_num_max + 1, size=1)[0])
+        # for i in range(add_human_num_down):
+        #     self.humans.append(self.generate_rectangle_flow_human(down=True))
+        # self.add_human_num = add_human_num_up + add_human_num_down
+        # self.human_num = self.human_num + self.add_human_num
 
         for i in range(len(self.humans)):
             human_policy = policy_factory[self.human_policy_name]()
@@ -199,13 +214,52 @@ class CrowdSim:
                 human.set(px, py, -px, -py, 0, 0, human_theta)
                 break
         return human
+    
+    def generate_rectangle_flow_human(self, down=True):
+        human = Human()
+        human.time_step = self.time_step
+
+        human.radius = 0.3
+        if self.random_human_v_pref:
+            human.v_pref = np.random.uniform(*self.human_v_pref, 1)[0]
+        else:
+            human.v_pref = 1.0
+        while True:
+            # add some noise to simulate all the possible cases robot could meet with human
+            px_noise = (np.random.random() - 0.5) * human.v_pref
+            px_side = np.random.random() > 0.5
+            px = self.rectangle_x * np.power(-1, int(px_side)) + px_noise
+            py = np.random.uniform(self.rectangle_y[0], self.rectangle_y[1], size=1)[0] * np.power(-1, int(down))
+            gx = -px
+            gy = py
+            collide = False
+            for agent in [self.robot] + self.humans:
+                if agent is None:
+                    continue
+                min_dist = human.radius + agent.radius + 0.05
+                if norm((px - agent.px, py - agent.py)) < min_dist or \
+                        norm((px - agent.gx, py - agent.gy)) < min_dist:
+                    collide = True
+                    break
+            for static_obs in range(self.static_obstacle_num):
+                min_dist = human.radius + self.static_obstacles[static_obs, 2] + 0.05
+                if norm((px - self.static_obstacles[static_obs, 0], 
+                         py - self.static_obstacles[static_obs, 1])) < min_dist:
+                    collide = True
+                    break
+            if not collide:
+                # px, py, gx, gy, vx, vy, theta
+                human_theta = atan2(-py - py, -px - px)
+                human.set(px, py, gx, gy, 0, 0, human_theta)
+                break
+        return human
         
     '''use c library to generate lidar scan, which is fast'''
     def get_lidar(self, isReset=False):
         num_circle_human = self.human_num
         num_circle_obstacle = self.static_obstacle_num
         robot_pose_new = np.array([self.robot.px, self.robot.py, self.robot.theta], dtype=np.float32)
-        human_circles = -100.0 * np.ones((self.human_num_max + self.static_obstacle_num_max, 3), dtype=np.float32)
+        human_circles = -100.0 * np.ones((self.human_num_max + self.static_obstacle_num_max + self.add_human_num_max * 2, 3), dtype=np.float32)
         for i in range(num_circle_human):
             human_circles[i] = np.array([self.humans[i].px, self.humans[i].py, self.humans[i].radius], dtype=np.float32)
         for j in range(num_circle_obstacle):
@@ -266,6 +320,66 @@ class CrowdSim:
         theta = robot_theta_w - self.init_quadruped_pose_w[2]
         return x, y, theta
 
+    def cal_dwa_action(self):
+        # dwa calculate action
+        action_cost = 99999.9
+        action_dwa = np.zeros(2)
+        dwa_horizon = 5
+        for i in range(self.action_choices.shape[0]):
+            robot_vel = self.action_choices[i]
+            
+            robot_x = self.robot.px
+            robot_y = self.robot.py
+            robot_theta = self.robot.theta
+            collision = False
+            dis_human_and_obstacle = 99999.9
+            robot_theta = robot_theta + robot_vel[1] * self.time_step
+            if robot_theta > np.pi:
+                robot_theta -= (2.0 * np.pi)
+            elif robot_theta < -np.pi:
+                robot_theta += (2.0 * np.pi)
+            for j in range(dwa_horizon):
+                # differential model
+                robot_x = robot_x + robot_vel[0] * self.time_step * cos(robot_theta)
+                robot_y = robot_y + robot_vel[0] * self.time_step * sin(robot_theta)
+                # differential model
+
+                # distance to humans
+                for k in range(self.human_num):
+                    human_x = self.humans[k].px + (j + 1) * self.humans[k].vx * self.time_step
+                    human_y = self.humans[k].py + (j + 1) * self.humans[k].vy * self.time_step
+                    dis_human_temp = hypot(human_x - robot_x, human_y - robot_y)
+                    if dis_human_temp <= self.humans[k].radius + self.robot.radius:
+                        collision = True
+                        break
+                    dis_human_and_obstacle = min(dis_human_and_obstacle, dis_human_temp)
+
+                if collision:
+                    break
+
+                # distance to obstacles
+                for k in range(self.static_obstacle_num):
+                    obstacle_x = self.static_obstacles[k, 0]
+                    obstacle_y = self.static_obstacles[k, 1]
+                    dis_obstacle_temp = hypot(obstacle_x - robot_x, obstacle_y - robot_y)
+                    if dis_obstacle_temp <= self.static_obstacles[k, 2] + self.robot.radius:
+                        collision = True
+                        break
+                    dis_human_and_obstacle = min(dis_human_and_obstacle, dis_obstacle_temp)
+
+                if collision:
+                    break
+
+            if collision:
+                continue
+            dis_goal = hypot(self.robot.gx - robot_x, self.robot.gy - robot_y)
+         
+            action_cost_temp = 1.0 / (dis_human_and_obstacle + 0.8) + dis_goal * 0.2
+            if action_cost > action_cost_temp:
+                action_cost = action_cost_temp
+                action_dwa = robot_vel
+        return action_dwa
+
     def step(self, action, eval=False, save_data=False):
         human_actions = np.zeros((self.human_num, 2), dtype=np.float32)
         for i in range(self.human_num):
@@ -293,14 +407,32 @@ class CrowdSim:
             action_after_clip = [action[0], action[1]]
 
             # clip action
+            # clip_in_place_rotation
             if self.clip_action:
                 if action[0] >= 0.3:
                     commands = torch.tensor([action[0], 0.0, action[1]], device=self.device)
                 else:
-                    action_after_clip = [0.0, 0.0]
-                    commands = torch.tensor([0.0, 0.0, 0.0], device=self.device)
+                    if action[1] > 0.5:
+                        action_after_clip = [0.0, 0.5]
+                    elif action[1] < -0.5:
+                        action_after_clip = [0.0, -0.5]
+                    elif action[1] < 0.3 and action[1] > -0.3:
+                        action_after_clip = [0.0, 0.0]
+                    else:
+                        action_after_clip = [0.0, action[1]]
+                    commands = torch.tensor([0.0, 0.0, action_after_clip[1]], device=self.device)
             else:
                 commands = torch.tensor([action[0], 0.0, action[1]], device=self.device)    
+
+            # backward or forward clip
+            # if self.clip_action:
+            #     if action[0] >= 0.3 or action[0] <= -0.3:
+            #         commands = torch.tensor([action[0], 0.0, action[1]], device=self.device)
+            #     else:
+            #         action_after_clip = [0.0, 0.0]
+            #         commands = torch.tensor([0.0, 0.0, action_after_clip[1]], device=self.device)
+            # else:
+            #     commands = torch.tensor([action[0], 0.0, action[1]], device=self.device)   
 
             obs_clone[:, 6:9] = commands
             obs = obs_clone
@@ -419,6 +551,11 @@ class CrowdSim:
         for i, human in enumerate(self.humans):
             # let humans move circularly from two points
             if human.reached_destination():
+                # if i < self.human_num - self.add_human_num:
+                #     self.humans[i].gx = -self.humans[i].gx
+                #     self.humans[i].gy = -self.humans[i].gy
+                # else:
+                #     self.humans[i].gx = -self.humans[i].gx
                 self.humans[i].gx = -self.humans[i].gx
                 self.humans[i].gy = -self.humans[i].gy
 

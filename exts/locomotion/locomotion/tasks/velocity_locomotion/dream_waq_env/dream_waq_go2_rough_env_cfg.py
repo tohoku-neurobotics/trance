@@ -64,7 +64,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         self.rewards.track_lin_vel_xy_exp.weight = 1.5
         self.rewards.track_ang_vel_z_exp.weight = 0.75
 
-        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
+        self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)  # only trained for the unified policy
 
 
         ### original reward
@@ -77,7 +77,7 @@ class UnitreeGo2RoughEnvCfg(LocomotionVelocityRoughEnvCfg):
         # self.rewards.base_height_l2.weight = -1.0
         # self.rewards.feet_air_time.weight = 0.1
         # self.rewards.action_rate_l2.weight = -0.01
-        # self.rewards.joint_power.weight = -2e-5
+        # self.rewards.joint_powers.weight = -2e-5
 
         # terminations
         self.terminations.base_contact.params["sensor_cfg"].body_names = "base"
@@ -136,8 +136,6 @@ class UnitreeGo2RoughEnvCfg_PLAY(UnitreeGo2RoughEnvCfg):
 
         self.commands.base_velocity.ranges.lin_vel_x = (0.3, 0.8)
         self.commands.base_velocity.ranges.lin_vel_y = (0.0, 0.0)
-
-        self.events.push_robot = None
 
         # self.events.physics_material.params["static_friction_range"] = (0.8, 0.8)
         # self.events.robot_joint_stiffness_and_damping.params["stiffness_distribution_params"] = (1.0, 1.0)

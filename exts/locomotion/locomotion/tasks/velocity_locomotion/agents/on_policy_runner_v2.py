@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 import torch
 import wandb
 
-from .actor_critic_slr_cnn import ActorCriticSLR
+from .actor_critic_slr import ActorCriticSLR
 from .ppo import PPO
 from locomotion.tasks.velocity_locomotion.slr_rl_env.slr_env_wrapped import SLRVecEnvWrapper
 

@@ -191,10 +191,11 @@ def main():
     parser.add_argument('--robot_model', default='differential', type=str)
     parser.add_argument('--use_angular', action='store_true', default=False)
     parser.add_argument('--random_radius', action='store_true', default=True)
+    
     # device
     parser.add_argument('--device', type=str, default='cuda')
     # Sets Gym, PyTorch and Numpy seeds
-    parser.add_argument('--seed', default=1, type=int)
+    parser.add_argument('--seed', default=4, type=int)
 
     # How often (episodes) we evaluate
     parser.add_argument('--eval_freq', default=200, type=int)
@@ -225,7 +226,8 @@ def main():
     parser.add_argument("--load_model", type=str, default="")
 
     # parser.add_argument("--load_test_model", type=str, default="")
-    parser.add_argument("--load_test_model", type=str, default="")
+    parser.add_argument("--load_test_model", type=str, default="step_1478485_success_87")
+    parser.add_argument('--test_single', action='store_true', default=False)
     # environment settings
     parser.add_argument("--human_num_max", type=int, default=4)
     parser.add_argument("--static_obstacle_num_max", type=int, default=3)

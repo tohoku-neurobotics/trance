@@ -4,14 +4,14 @@ from matplotlib.patches import Rectangle
 import numpy as np
 
 from numpy.linalg import norm
-from utils.human import Human
-from utils.robot import Robot
-from utils.state import ObservableState, JointState
+from utils_trans.human import Human
+from utils_trans.robot import Robot
+from utils_trans.state import ObservableState, JointState
 from policy.policy_factory import policy_factory
 from info import *
 from math import atan2, hypot, sqrt, cos, sin, fabs, inf, ceil
 from time import sleep, time
-from C_library.motion_plan_lib import *
+
 from collections import deque
 
 class CrowdSim:

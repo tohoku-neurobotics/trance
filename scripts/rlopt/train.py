@@ -98,7 +98,8 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
 )
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab.utils.io import dump_yaml
+import pickle
 
 # Import extensions to set up environment tasks
 import locomotion.tasks  # noqa: F401
@@ -157,8 +158,11 @@ def main(
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
+
+    with open(os.path.join(log_dir, "params", "env.pkl"), "wb") as f1:
+        pickle.dump(env_cfg, f1)
+    with open(os.path.join(log_dir, "params", "agent.pkl"), "wb") as f2:
+        pickle.dump(agent_cfg, f2)
 
     # post-process agent configuration
     agent_cfg = process_sb3_cfg(agent_cfg)  # type: ignore

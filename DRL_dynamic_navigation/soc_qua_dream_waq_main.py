@@ -41,6 +41,7 @@ def eval_policy(policy, eval_env, current_steps, eval_episodes=100, save_directo
             # t1 = time.time()
             with eval_policy_mode(policy):
                 action = policy.select_action(lidar_image, terrain, robot_goal_state)
+            # action = eval_env.cal_dwa_action()
             lidar_image, terrain, robot_goal_state, reward, done, info = eval_env.step(action, eval=True, save_data=if_save_data)
           
             # print('time: ', time.time() - t1) # 7.5ms
@@ -120,7 +121,7 @@ def main():
     parser.add_argument("--load_model", type=str, default="")
 
     # step_940000
-    parser.add_argument("--load_test_model", type=str, default="")
+    parser.add_argument("--load_test_model", type=str, default="step_1560000")
 
     parser.add_argument("--init_test", action="store_true", default=False)
 
@@ -167,7 +168,7 @@ def main():
     if args.robot_model == "quadruped":
         file_prefix = './logs/' + args.policy + '_' + args.robot_model + '_' + args.lidar_obs_type + '_dream_waq_cnn'
     else:
-        file_prefix = './logs/' + args.policy + '_' + args.robot_model + '_' + args.lidar_obs_type
+        file_prefix = './logs/' + args.policy + '_' + args.robot_model + '_' + args.lidar_obs_type # + '_backward'  # response to tase
     if args.action_penalty:
         file_prefix = file_prefix + '_action_penalty'
     if args.random_human_v_pref:
@@ -182,7 +183,9 @@ def main():
         file_prefix = file_prefix + '/seed_' + str(args.seed)
     if not args.clip_action:
         file_prefix = file_prefix + '_no_clip' 
-
+    else:
+        file_prefix = file_prefix + '_clip_in_place_rotation' # new
+  
     file_results = file_prefix + '/results'
     file_models = file_prefix + '/models'
     file_evaluation_episodes = file_prefix + '/evaluation_episodes'
@@ -206,7 +209,10 @@ def main():
     writer = SummaryWriter(log_dir=file_results)
 
     action_range = np.array([[0.0, -1.0],
-                             [0.5,  1.0]])
+                             [0.5,  1.0]])  # clip_in_place_rotation
+
+    # action_range = np.array([[-0.5, -1.0],
+    #                          [0.5,  1.0]])  # backward
     
     action_resolution = [0.05, 0.1]
     action_num = [int((action_range[1, 0] - action_range[0, 0]) / action_resolution[0]) + 1,
@@ -225,7 +231,7 @@ def main():
 
         env = CrowdSim(args, terrain_dim, action_range, device, 
                        quadruped_policy=quadruped_policy, quadruped_env=quadruped_env)
-        eval_env = CrowdSim(args, terrain_dim, action_range, device,
+        eval_env = CrowdSim(args, terrain_dim, action_range, device, action_choices=action_choices,
                             quadruped_policy=quadruped_policy, quadruped_env=quadruped_env)
     else:
         terrain_dim = 0
@@ -273,7 +279,9 @@ def main():
                 action_range,
                 device
             )
-            old_agent.load('logs/sac_differential_transform/seed_1_frame_6/models/step_3280000_success_98', device=device)
+            # old_agent.load('logs/sac_differential_transform/seed_1_frame_6/models/step_3280000_success_98', device=device)
+            old_agent.load('logs/sac_differential_transform/seed_1_frame_6/models/step_3680000_success_99', device=device)
+            # old_agent.load('logs/sac_differential_transform_backward/seed_1/models/step_4560000_success_98', device=device)
             agent.load("", old_agent=old_agent, device=device)
 
             if args.init_test:

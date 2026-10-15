@@ -9,7 +9,11 @@ import statistics as stats
 
 # specific_folder = './logs/sac_differential_direct/seed_1/final_test_episodes_104/*.npz'
 
-specific_folder = './logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1_no_clip_0/final_test_episodes_init_924/*.npz'
+# specific_folder = './logs/sac_differential_transform/seed_1_frame_6/final_test_episodes_step_3680000_success_99/*.npz'
+# specific_folder = './logs/sac_differential_transform_backward/seed_1/final_test_episodes_step_3260000_success_100-980/*.npz'
+# specific_folder = './logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1_clip_in_place_rotation/final_test_episodes_step_1380000-968/*.npz'
+# specific_folder = './logs/height/*.npz'
+specific_folder = './logs/rgl_differential_random_radius/seed_4/final_test_episodes-786/*.npz'
 
 file_list = glob.glob(specific_folder)
 

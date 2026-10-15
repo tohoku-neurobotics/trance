@@ -51,7 +51,6 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
 )
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.io import dump_pickle, dump_yaml
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 from locomotion.tasks.velocity_locomotion.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg, A1RoughPPOCfg
@@ -120,10 +119,13 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: Go2RoughPPOC
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     # agent_cfg.load_run = "2025-07-31_14-51-16_dream_waq_cnn_decoder"  # Go2 2500
     # more random
-    agent_cfg.load_run = "2025-12-05_15-01-56_dream_waq"   # Go2 more random, 2200
+    # agent_cfg.load_run = "2025-12-05_15-01-56_dream_waq"   # Go2 more random, 2200
+    # agent_cfg.load_checkpoint = "model_5800.pt"
     # agent_cfg.load_run = "2025-07-31_08-08-33_dream_waq_original"   # Go2 original 2400
     # agent_cfg.load_run = "2025-07-31_07-19-04_dream_waq_mlp"   # Go2 mlp 2600
-    agent_cfg.load_checkpoint = "model_5800.pt"
+    
+    agent_cfg.load_run = "2025-12-05_15-01-56_dream_waq_no_y"   # Go2 more random, 2200
+    agent_cfg.load_checkpoint = "model_2900.pt"
     resume_path = get_checkpoint_path(log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint)
     log_dir = os.path.dirname(resume_path)
 

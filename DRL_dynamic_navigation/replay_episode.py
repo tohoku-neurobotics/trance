@@ -43,9 +43,11 @@ use_laser = True
 # 41, 198, 328, 353, 387, 472, collision and pedestrian fault
 # 113, 116, 334, collision and robot fault
 # 127, 286, 469, collision and both fault
-# 
+# 0, 2, 8, 11, 13, 43
+# specific_file_name = \
+#     "./logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1/final_test_episodes_step_1460000/eval_0_43.npz"
 specific_file_name = \
-    "./logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1/final_test_episodes_step_1460000/eval_0_8.npz"
+    "./logs/sac_differential_transform_backward/seed_1/final_test_episodes_step_3260000_success_100-980/eval_0_6.npz"
 log_env = np.load(specific_file_name)
 
 robot = log_env['robot']
@@ -69,8 +71,8 @@ radius_robot = 0.3
 # for i in range(steps):
 #     if fabs(robot[i][0]) > 50.0:
 #         break
-#     ax.set_xlim(-5.0, 5.0)
-#     ax.set_ylim(-5.0, 5.0)
+#     ax.set_xlim(-6.0, 6.0)
+#     ax.set_ylim(-6.0, 6.0)
 #     if use_laser:
 #         scan_intersection = []
 #         for laser_i in range(laser_beam):
@@ -167,10 +169,10 @@ labels = ax.get_xticklabels() + ax.get_yticklabels()
 
 
 
-ax.set_xlim(-5.0, 5.0)
-ax.set_ylim(-5.0, 5.0)
+ax.set_xlim(-6.0, 6.0)
+ax.set_ylim(-6.0, 6.0)
  
-with writer.saving(fig, "simulation_eval_8.mp4", 250):
+with writer.saving(fig, "backward_motion.mp4", 250):
     for i in range(steps):
         if fabs(robot[i][0]) > 50.0:
             break
@@ -182,8 +184,8 @@ with writer.saving(fig, "simulation_eval_8.mp4", 250):
         [label.set_fontname("Times New Roman") for label in labels]
 
         
-        ax.set_xlim(-5.0, 5.0)
-        ax.set_ylim(-5.0, 5.0)
+        ax.set_xlim(-6.0, 6.0)
+        ax.set_ylim(-6.0, 6.0)
 
         if use_laser:
             scan_intersection = []

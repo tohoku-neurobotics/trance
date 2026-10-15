@@ -52,6 +52,7 @@ class SLRVecEnvWrapper(VecEnv):
         # initialize the wrapper
         self.env = env
         self.clip_actions = clip_actions
+        self.clip_obs = 100
 
         # store information required by wrapper
         self.num_envs = self.unwrapped.num_envs
@@ -180,7 +181,7 @@ class SLRVecEnvWrapper(VecEnv):
             actions = torch.clamp(actions, -self.clip_actions, self.clip_actions)
         # record step information
         obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
-        self.obs = obs_dict["policy"]
+        self.obs = torch.clip(obs_dict["policy"], -self.clip_obs, self.clip_obs)
 
         self.obs_all = torch.cat([self.obs, self.history_obs.view(self.num_envs, -1)], dim=-1)
         self.history_obs = torch.where(

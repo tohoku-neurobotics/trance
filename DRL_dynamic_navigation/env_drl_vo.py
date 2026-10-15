@@ -4,14 +4,14 @@ from matplotlib.patches import Rectangle
 import numpy as np
 
 from numpy.linalg import norm
-from utils.human import Human
-from utils.robot import Robot
-from utils.state import ObservableState
+from utils_trans.human import Human
+from utils_trans.robot import Robot
+from utils_trans.state import ObservableState
 from policy.policy_factory import policy_factory
 from info import *
 from math import atan2, hypot, sqrt, cos, sin, fabs, inf, ceil
 from time import sleep, time
-from C_library.motion_plan_lib import *
+from C_library.motion_plan_lib_opt import *
 from collections import deque
 
 class CrowdSim:
@@ -193,42 +193,31 @@ class CrowdSim:
 
         
     def get_lidar(self):
-        scan = np.zeros(self.n_laser, dtype=np.float32)
-        # robot_pose = np.array([self.robot.px, self.robot.py, self.robot.theta])
-        robot_pose = np.array([self.robot.px, self.robot.py, self.robot.theta], dtype=np.float32)
-        num_line = self.lines.shape[0]
         num_circle_human = self.human_num
         num_circle_obstacle = self.static_obstacle_num
-        InitializeEnv(num_line, num_circle_human + num_circle_obstacle, self.n_laser, self.frame_stack - 1, self.laser_angle_resolute)
-        for i in range (num_line):
-            set_lines(4 * i    , self.lines[i][0][0])
-            set_lines(4 * i + 1, self.lines[i][0][1])
-            set_lines(4 * i + 2, self.lines[i][1][0])
-            set_lines(4 * i + 3, self.lines[i][1][1])
-        for i in range (num_circle_human):
-            set_circles(3 * i    , self.humans[i].px)
-            set_circles(3 * i + 1, self.humans[i].py)
-            set_circles(3 * i + 2, self.humans[i].radius)
-        for i in range (num_circle_obstacle):
-            set_circles(3 * (i + num_circle_human)    , self.static_obstacles[i, 0])
-            set_circles(3 * (i + num_circle_human) + 1, self.static_obstacles[i, 1])
-            set_circles(3 * (i + num_circle_human) + 2, self.static_obstacles[i, 2])
-        set_robot_pose(robot_pose[0], robot_pose[1], robot_pose[2])
-        cal_laser()
+        robot_pose_new = np.array([self.robot.px, self.robot.py, self.robot.theta], dtype=np.float32)
+        human_circles = -100.0 * np.ones((self.human_num_max + self.static_obstacle_num_max, 3), dtype=np.float32)
+        for i in range(num_circle_human):
+            human_circles[i] = np.array([self.humans[i].px, self.humans[i].py, self.humans[i].radius], dtype=np.float32)
+        for j in range(num_circle_obstacle):
+            human_circles[j + num_circle_human] = np.array([self.static_obstacles[j, 0],
+                                                            self.static_obstacles[j, 1],
+                                                            self.static_obstacles[j, 2]], dtype=np.float32)
+    
+        scans_raw, scan_lines = cal_laser(human_circles, robot_pose_new)
+
         self.scan_intersection = np.zeros((self.n_laser, 2, 2), dtype=np.float32)
+        scan_end = np.zeros((self.n_laser, 2), dtype=np.float32)
         for i in range(self.n_laser):
-            scan[i] = get_scan(i)
-         
             ### used for visualization
-            self.scan_intersection[i, 0, 0] = self.robot.px
-            self.scan_intersection[i, 0, 1] = self.robot.py
-            self.scan_intersection[i, 1, 0] = get_scan_line(4 * i + 2)
-            self.scan_intersection[i, 1, 1] = get_scan_line(4 * i + 3)
+            self.scan_intersection[i, 0, 0] = scan_lines[i, 0]
+            self.scan_intersection[i, 0, 1] = scan_lines[i, 1]
+            self.scan_intersection[i, 1, 0] = scan_lines[i, 2]
+            self.scan_intersection[i, 1, 1] = scan_lines[i, 3]
+            scan_end[i, :] = np.array([self.scan_intersection[i, 1, 0], self.scan_intersection[i, 1, 1]])
             ### used for visualization
     
-        self.scan_current = np.clip(scan, self.laser_min_range, self.laser_max_range)
-
-        ReleaseEnv()
+        self.scan_current = np.clip(scans_raw, self.laser_min_range, self.laser_max_range)
         
 
     def construct_obs(self):

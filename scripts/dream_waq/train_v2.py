@@ -20,7 +20,7 @@ parser.add_argument("--video_interval", type=int, default=2000, help="Interval b
 parser.add_argument("--num_envs", type=int, default=None, help="Number of environments to simulate.")
 parser.add_argument("--task", type=str, default="Dream-WaQ-Rough-Unitree-Go2-v2", help="Name of the task.")
 parser.add_argument("--seed", type=int, default=None, help="Seed used for the environment")
-parser.add_argument("--max_iterations", type=int, default=None, help="RL Policy training iterations.")
+parser.add_argument("--max_iterations", type=int, default=3000, help="RL Policy training iterations.")
 
 # append AppLauncher cli args
 AppLauncher.add_app_launcher_args(parser)
@@ -51,7 +51,8 @@ from isaaclab.envs import (
     ManagerBasedRLEnvCfg,
 )
 from isaaclab.utils.dict import print_dict
-from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab.utils.io import dump_yaml
+import pickle
 from isaaclab_tasks.utils import get_checkpoint_path
 from isaaclab_tasks.utils.hydra import hydra_task_config
 from locomotion.tasks.velocity_locomotion.agents.dream_waq_ppo_cfg import Go2RoughPPOCfg, A1RoughPPOCfg
@@ -59,7 +60,7 @@ from locomotion.tasks.velocity_locomotion.dream_waq_env.dream_waq_env_wrapped im
 
 # Import extensions to set up environment tasks
 import locomotion.tasks  # noqa: F401
-import wandb
+# import wandb
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -76,6 +77,9 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: Go2RoughPPOC
 
     # set the environment seed
     # note: certain randomizations occur in the environment initialization so we set the seed here
+    agent_cfg.seed = (
+        args_cli.seed if args_cli.seed is not None else agent_cfg.seed
+    )
     env_cfg.seed = agent_cfg.seed
     env_cfg.sim.device = args_cli.device 
     agent_cfg.device = args_cli.device
@@ -107,24 +111,24 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: Go2RoughPPOC
     # wrap around environment
     env = DreamWaQVecEnvWrapper(env, clip_actions=agent_cfg.clip_actions)
 
-    wandb.tensorboard.patch(root_logdir=log_dir)
+    # wandb.tensorboard.patch(root_logdir=log_dir)
 
     # initialize wandb and make callback
-    if 'Go2' in args_cli.task:
-        project_name = "dream_waq_go2_v2"
-    elif 'A1' in args_cli.task:
-        project_name = "dream_waq_a1_v2"
-    else:
-        project_name = 'dream_waq_default'
-    run = wandb.init(
-        project=project_name,
-        entity="weizhu996",
-        name=log_time,
-        config=agent_cfg.to_dict() | env_cfg.to_dict(),
-        sync_tensorboard=True,
-        monitor_gym=True if args_cli.video else False,
-        save_code=False,
-    )
+    # if 'Go2' in args_cli.task:
+    #     project_name = "dream_waq_go2_v2"
+    # elif 'A1' in args_cli.task:
+    #     project_name = "dream_waq_a1_v2"
+    # else:
+    #     project_name = 'dream_waq_default'
+    # run = wandb.init(
+    #     project=project_name,
+    #     entity="weizhu996",
+    #     name=log_time,
+    #     config=agent_cfg.to_dict() | env_cfg.to_dict(),
+    #     sync_tensorboard=True,
+    #     monitor_gym=True if args_cli.video else False,
+    #     save_code=False,
+    # )
 
     # create runner from dream-waq
     runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=log_dir, device=agent_cfg.device)
@@ -140,8 +144,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: Go2RoughPPOC
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
+
+    with open(os.path.join(log_dir, "params", "env.pkl"), "wb") as f1:
+        pickle.dump(env_cfg, f1)
+    with open(os.path.join(log_dir, "params", "agent.pkl"), "wb") as f2:
+        pickle.dump(agent_cfg, f2)
 
     # run training
     runner.learn(num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True)
@@ -149,7 +156,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg, agent_cfg: Go2RoughPPOC
     # close the simulator
     env.close()
     
-    run.finish()
+    # run.finish()
 
 if __name__ == "__main__":
     # run the main function

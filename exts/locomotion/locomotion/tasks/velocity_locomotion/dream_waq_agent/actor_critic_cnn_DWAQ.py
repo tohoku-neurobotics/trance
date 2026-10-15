@@ -125,11 +125,31 @@ class ActorCritic_DWAQ(nn.Module):
     def entropy(self):
         return self.distribution.entropy().sum(dim=-1)
 
+    # def update_distribution(self, observations):
+    #     mean = self.actor(observations)
+    #     std = torch.exp(self.log_std)
+    #     std = torch.clamp(std, min=1e-3, max=10.0)
+    #     self.distribution = Normal(mean, mean * 0.0 + std)
+
     def update_distribution(self, observations):
-        mean = self.actor(observations)
-        std = torch.exp(self.log_std)
+        # 1. Protect log_std from NaN infection
+        if torch.isnan(self.log_std).any():
+            with torch.no_grad():
+                self.log_std.nan_to_num_(nan=0.0)
+
+        # 2. Clamped log_std to valid bounds
+        clamped_log_std = torch.clamp(self.log_std, min=-8.0, max=2.0)
+        std = torch.exp(clamped_log_std)
         std = torch.clamp(std, min=1e-3, max=10.0)
-        self.distribution = Normal(mean, mean * 0.0 + std)
+        
+        # 3. Predict mean
+        observations = torch.nan_to_num(observations, nan=0.0, posinf=10.0, neginf=-10.0)
+        mean = self.actor(observations)
+        mean = torch.nan_to_num(mean, nan=0.0, posinf=10.0, neginf=-10.0)
+
+        # 4. Safe expand
+        scale = std.unsqueeze(0).expand_as(mean)
+        self.distribution = Normal(mean, scale)
 
     def act(self, observations, obs_history, **kwargs):
         code,_,decode,_,_,_,_ = self.cenet_forward(obs_history)

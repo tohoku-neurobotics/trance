@@ -20,6 +20,7 @@ from math import cos, sin, hypot, fabs
 # specific_file_name = './logs/avocado_differential/seed_1/final_test_episodes/eval_0_23_fail.npz'
 # specific_file_name = './logs/neupan_differential/seed_1/final_test_episodes/eval_0_23_fail.npz'
 # specific_file_name = './logs/nmpc_differential/seed_1/final_test_episodes/eval_0_23_fail.npz'
+specific_file_name = './logs/height/eval_23.npz'
 # specific_file_name = './logs/sac_differential_transform/seed_1_frame_6/final_test_episodes_step_3820000_success_98-972/eval_0_23.npz'
 # specific_file_name = './logs/sac_quadruped_transform_dream_waq_cnn_64/seed_1/final_test_episodes_step_1060000_1/eval_0_261_fail.npz'
 
@@ -29,8 +30,8 @@ from math import cos, sin, hypot, fabs
 # specific_file_name = './logs/sac_quadruped_transform_dream_waq_cnn_64/seed_1/final_test_episodes_step_1060000_1/eval_0_261_fail.npz'  # fall
 # specific_file_name = './logs/sac_quadruped_transform_dream_waq_cnn_64/seed_1/final_test_episodes_step_1060000_3/eval_0_23_fail.npz'  # timeout
 
-specific_file_name = \
-    "./logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1/final_test_episodes_step_1460000/eval_0_32_fail.npz"
+# specific_file_name = \
+#     "./logs/sac_quadruped_transform_dream_waq_cnn_penalty_rotation_64/seed_1/final_test_episodes_step_1460000/eval_0_32_fail.npz"
 
 log_env = np.load(specific_file_name)
 

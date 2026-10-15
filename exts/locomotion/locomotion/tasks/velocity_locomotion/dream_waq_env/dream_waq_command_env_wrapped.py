@@ -1,0 +1,299 @@
+from __future__ import annotations
+
+import gymnasium as gym
+import torch
+
+
+from .dream_waq_go2_rough_env_cfg import NavUnitreeGo2RoughEnvCfg
+
+import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_utils
+from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedRLEnv, DirectRLEnv
+
+import isaaclab.utils.math as math_utils
+
+import numpy as np
+
+# Copyright (c) 2022-2025, The Isaac Lab Project Developers.
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+
+import gymnasium as gym
+import torch
+
+from rsl_rl.env import VecEnv
+
+from isaaclab.envs import DirectRLEnv, ManagerBasedRLEnv
+import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
+
+class DreamWaQVecEnvWrapper(VecEnv):
+    """Wraps around Isaac Lab environment for RSL-RL library
+
+    To use asymmetric actor-critic, the environment instance must have the attributes :attr:`num_privileged_obs` (int).
+    This is used by the learning agent to allocate buffers in the trajectory memory. Additionally, the returned
+    observations should have the key "critic" which corresponds to the privileged observations. Since this is
+    optional for some environments, the wrapper checks if these attributes exist. If they don't then the wrapper
+    defaults to zero as number of privileged observations.
+
+    .. caution::
+
+        This class must be the last wrapper in the wrapper chain. This is because the wrapper does not follow
+        the :class:`gym.Wrapper` interface. Any subsequent wrappers will need to be modified to work with this
+        wrapper.
+
+    Reference:
+        https://github.com/leggedrobotics/rsl_rl/blob/master/rsl_rl/env/vec_env.py
+    """
+
+    def __init__(self, env: ManagerBasedRLEnv | DirectRLEnv, clip_actions: float | None = None):
+        """Initializes the wrapper.
+
+        Note:
+            The wrapper calls :meth:`reset` at the start since the RSL-RL runner does not call reset.
+
+        Args:
+            env: The environment to wrap around.
+            clip_actions: The clipping value for actions. If ``None``, then no clipping is done.
+
+        Raises:
+            ValueError: When the environment is not an instance of :class:`ManagerBasedRLEnv` or :class:`DirectRLEnv`.
+        """
+        # check that input is valid
+        if not isinstance(env.unwrapped, ManagerBasedRLEnv) and not isinstance(env.unwrapped, DirectRLEnv):
+            raise ValueError(
+                "The environment must be inherited from ManagerBasedRLEnv or DirectRLEnv. Environment type:"
+                f" {type(env)}"
+            )
+        # initialize the wrapper
+        self.env = env
+        self.clip_actions = clip_actions
+
+        # store information required by wrapper
+        self.num_envs = self.unwrapped.num_envs
+        self.device = self.unwrapped.device
+        self.max_episode_length = self.unwrapped.max_episode_length
+        self.num_height = 0
+
+        # obtain dimensions of the environment
+        if hasattr(self.unwrapped, "action_manager"):
+            self.num_actions = self.unwrapped.action_manager.total_action_dim
+        else:
+            self.num_actions = gym.spaces.flatdim(self.unwrapped.single_action_space)
+        if hasattr(self.unwrapped, "observation_manager"):
+            self.num_obs = self.unwrapped.observation_manager.group_obs_dim["policy"][0]
+        else:
+            self.num_obs = gym.spaces.flatdim(self.unwrapped.single_observation_space["policy"])
+        # -- privileged observations
+        if (
+            hasattr(self.unwrapped, "observation_manager")
+            and "critic" in self.unwrapped.observation_manager.group_obs_dim
+        ):
+            self.num_privileged_obs = self.unwrapped.observation_manager.group_obs_dim["critic"][0]
+        elif hasattr(self.unwrapped, "num_states") and "critic" in self.unwrapped.single_observation_space:
+            self.num_privileged_obs = gym.spaces.flatdim(self.unwrapped.single_observation_space["critic"])
+        else:
+            self.num_privileged_obs = 0
+
+        self.history_len = self.cfg.history_len
+        self.obs = torch.zeros(self.num_envs, self.num_obs, device=self.device, dtype=torch.float)
+        self.history_obs = torch.zeros(self.num_envs, self.history_len * self.num_obs, device=self.device, dtype=torch.float)
+        self.privileged_obs = torch.zeros(self.num_envs, self.num_privileged_obs, device=self.device, dtype=torch.float)
+        self.prev_privileged_obs = torch.zeros(self.num_envs, self.num_privileged_obs, device=self.device, dtype=torch.float)
+
+        command_dataset_np = np.load('/home/wei/quadruped_social_navigation/scripts/action_data_all.npy')
+        self.command_length = command_dataset_np.shape[0]
+        command_dataset_tensor = torch.tensor(command_dataset_np, dtype=torch.float32, device=self.device)
+        zeros = torch.zeros(command_dataset_tensor.shape[0], 1, dtype=command_dataset_tensor.dtype, device=self.device)
+        self.command_dataset = torch.cat([command_dataset_tensor[:, :1], zeros, command_dataset_tensor[:, 1:]], dim=1)
+        self.command_start_idx = torch.randint(low=0, high=self.command_length, size=(int(self.num_envs / 2),), device=self.device)
+
+        # modify the action space to the clip range
+        self._modify_action_space()
+
+        # reset at the start since the RSL-RL runner does not call reset
+        self.env.reset()
+
+    def __str__(self):
+        """Returns the wrapper name and the :attr:`env` representation string."""
+        return f"<{type(self).__name__}{self.env}>"
+
+    def __repr__(self):
+        """Returns the string representation of the wrapper."""
+        return str(self)
+
+    """
+    Properties -- Gym.Wrapper
+    """
+
+    @property
+    def cfg(self) -> object:
+        """Returns the configuration class instance of the environment."""
+        return self.unwrapped.cfg
+
+    @property
+    def render_mode(self) -> str | None:
+        """Returns the :attr:`Env` :attr:`render_mode`."""
+        return self.env.render_mode
+
+    @property
+    def observation_space(self) -> gym.Space:
+        """Returns the :attr:`Env` :attr:`observation_space`."""
+        return self.env.observation_space
+
+    @property
+    def action_space(self) -> gym.Space:
+        """Returns the :attr:`Env` :attr:`action_space`."""
+        return self.env.action_space
+
+    @classmethod
+    def class_name(cls) -> str:
+        """Returns the class name of the wrapper."""
+        return cls.__name__
+
+    @property
+    def unwrapped(self) -> ManagerBasedRLEnv | DirectRLEnv:
+        """Returns the base environment of the wrapper.
+
+        This will be the bare :class:`gymnasium.Env` environment, underneath all layers of wrappers.
+        """
+        return self.env.unwrapped
+
+    """
+    Properties
+    """
+
+    # get robot pose
+    def get_robot_pose(self, env_id: int):
+        return self.unwrapped.get_robot_pose(env_id)
+
+    def get_observations(self) -> dict:
+        obs_all = {
+            "obs": self.obs,
+            "privileged_obs": self.privileged_obs,
+            "prev_privileged_obs": self.prev_privileged_obs,
+            "history_obs": self.history_obs,
+        }
+        # return observations
+        return obs_all
+
+    @property
+    def episode_length_buf(self) -> torch.Tensor:
+        """The episode length buffer."""
+        return self.unwrapped.episode_length_buf
+
+    @episode_length_buf.setter
+    def episode_length_buf(self, value: torch.Tensor):
+        """Set the episode length buffer.
+
+        Note:
+            This is needed to perform random initialization of episode lengths in RSL-RL.
+        """
+        self.unwrapped.episode_length_buf = value
+
+    """
+    Operations - MDP
+    """
+
+    def seed(self, seed: int = -1) -> int:  # noqa: D102
+        return self.unwrapped.seed(seed)
+
+    def _reset_idx(self, env_ids):
+        super()._reset_idx(env_ids)
+        filtered_env_ids: list[int] = [x for x in env_ids if x < 1000]
+        if len(filtered_env_ids) > 0:
+            self.command_start_idx[filtered_env_ids] = torch.randint(low=0, high=self.command_length, size=(len(filtered_env_ids),), device=self.device)
+
+    def reset(self, seed=None, commands=None) -> dict:  # noqa: D102
+        # reset the environment
+        if seed is not None:
+            self.seed(seed) # reset seed
+        obs_dict, _ = self.env.reset()
+        self.history_obs = torch.zeros(self.num_envs, self.history_len * self.num_obs, device=self.device, dtype=torch.float)
+        self.prev_privileged_obs = torch.zeros(self.num_envs, self.num_privileged_obs, device=self.device, dtype=torch.float)
+        self.obs = obs_dict["policy"]
+        self.privileged_obs = obs_dict["critic"]
+
+        command_idx = (self.command_start_idx + self.episode_length_buf[:int(self.num_envs / 2)]) % self.command_length
+        commands = self.command_dataset[command_idx, :]
+
+        obs_clone = self.obs.clone()
+        privileged_obs_clone = self.privileged_obs.clone()
+        obs_clone[:int(self.num_envs / 2), 6:9] = commands
+        privileged_obs_clone[:int(self.num_envs / 2), 9:12] = commands
+        self.obs = obs_clone
+        self.privileged_obs = privileged_obs_clone
+        obs_all = {
+            "obs": self.obs,
+            "privileged_obs": self.privileged_obs,
+            "prev_privileged_obs": self.prev_privileged_obs,
+            "history_obs": self.history_obs,
+        }
+        # return observations
+        return obs_all
+
+    def step(self, actions: torch.Tensor) -> tuple[dict, torch.Tensor, torch.Tensor, dict]:
+        # clip actions
+        if self.clip_actions is not None:
+            actions = torch.clamp(actions, -self.clip_actions, self.clip_actions)
+        self.prev_privileged_obs = self.privileged_obs.clone()
+        # record step information
+        obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
+        self.obs = obs_dict["policy"]
+        self.privileged_obs = obs_dict['critic']
+
+        command_idx = (self.command_start_idx + self.episode_length_buf[:int(self.num_envs / 2)]) % self.command_length
+        commands = self.command_dataset[command_idx, :]
+        
+        obs_clone = self.obs.clone()
+        privileged_obs_clone = self.privileged_obs.clone()
+        obs_clone[:int(self.num_envs / 2), 6:9] = commands
+        privileged_obs_clone[:int(self.num_envs / 2), 9:12] = commands
+        self.obs = obs_clone
+        self.privileged_obs = privileged_obs_clone
+        history_obs_tmp = self.history_obs[:, self.num_obs:]
+        self.history_obs = torch.cat((history_obs_tmp, self.obs), dim=-1)
+        # compute dones for compatibility with RSL-RL
+        dones = (terminated | truncated).to(dtype=torch.long)
+        # move extra observations to the extras dict
+        obs_all = {
+            "obs": self.obs,
+            "privileged_obs": self.privileged_obs,
+            "prev_privileged_obs": self.prev_privileged_obs,
+            "history_obs": self.history_obs,
+        }
+        extras["observations"] = obs_dict
+        # move time out information to the extras dict
+        # this is only needed for infinite horizon tasks
+        if not self.unwrapped.cfg.is_finite_horizon:
+            extras["time_outs"] = truncated
+
+        # return the step information
+        return obs_all, rew, dones, extras
+
+    def close(self):  # noqa: D102
+        return self.env.close()
+
+    """
+    Helper functions
+    """
+
+    def _modify_action_space(self):
+        """Modifies the action space to the clip range."""
+        if self.clip_actions is None:
+            return
+
+        # modify the action space to the clip range
+        # note: this is only possible for the box action space. we need to change it in the future for other action spaces.
+        self.env.unwrapped.single_action_space = gym.spaces.Box(
+            low=-self.clip_actions, high=self.clip_actions, shape=(self.num_actions,)
+        )
+        self.env.unwrapped.action_space = gym.vector.utils.batch_space(
+            self.env.unwrapped.single_action_space, self.num_envs
+        )
+
+
+
+
+  
