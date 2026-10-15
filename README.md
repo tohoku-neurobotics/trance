@@ -1,6 +1,7 @@
 # Project info
 - [website](https://tohoku-neurobotics.github.io/trance.github.io/)
 - This work has been accepted by IEEE Transactions on Automation Science and Engineering
+- branch train_tase is the latest version
 
 # Training environments
 - ubuntu 24
