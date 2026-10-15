@@ -1,5 +1,5 @@
 # Project info
-- [website](https://github.com/tohoku-neurobotics/trance.github.io)
+- [website](https://tohoku-neurobotics.github.io/trance.github.io/)
 - This work has been accepted by IEEE Transactions on Automation Science and Engineering
 
 # Training environments
